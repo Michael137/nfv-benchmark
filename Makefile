@@ -62,10 +62,12 @@ RXER_TEST_SRC += test-rxer/benchmark.c
 MAIN_SRC = $(SRC)
 MAIN_SRC += main.c
 
-ifeq ($(MAKECMDGOALS), jit-test)
-	JIT_SRC += tests/$(BENCHMARK)/benchmark.c
-endif
+#ifeq ($(MAKECMDGOALS), jit-test)
+#	JIT_SRC += tests/$(BENCHMARK)/benchmark.c
+#endif
 
+BUILD_DIR = build
+BIN_DIR = bin
 
 # Object file rules
 MAIN_OBJ = $(MAIN_SRC:%.c=$(BUILD_DIR)/%.o)
@@ -74,17 +76,15 @@ TXER_OBJ = $(TXER_SRC:%.c=$(BUILD_DIR)/%.o)
 RXER_OBJ = $(RXER_SRC:%.c=$(BUILD_DIR)/%.o)
 RXER_TEST_OBJ = $(RXER_TEST_SRC:%.c=$(BUILD_DIR)/%.o)
 
+#$(info ${JIT_OBJ}) 
+
 ALLSRC=$(SRC)
 ALLSRC+=$(wildcard *.c)
 ALLSRC+= $(wildcard src/elements/*.c)
-ALLSRC+=$(wildcard tests/*/benchmark.c)
+#ALLSRC+=$(wildcard tests/*/benchmark.c)
 ALLSRC+=$(wildcard test-rxer/benchmark.c)
 
 ALLOBJ= $(ALLSRC:%.c=$(BUILD_DIR)/%.o)
-
-
-BUILD_DIR = build
-BIN_DIR = bin
 
 # Choose the final CFLAGS based on the profile
 ifeq ($(PROFILE), optimized)
@@ -101,8 +101,8 @@ all: tags main
 
 .PHONY: tags
 tags:
-	rm -f tags
-	ctags -R *
+	@rm -f tags
+	@ctags -R *
 
 .PHONY: clean
 clean:
