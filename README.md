@@ -46,7 +46,8 @@ Hugepagesize:       2048 kB
 - [ ] Analyze benchmarks
   - [ ] Reproduce behaviour from paper
     - [ ] changing workload effects optimizations significantly
-    - [ ] hand-written optimizations outperform naive (and compiler optimized) versions
+      - [ ] use traffic generator, e.g., iperf for benchmarks
+    - [x] hand-written optimizations outperform naive (and compiler optimized) versions
 - [ ] Write custom benchmarks
   - [ ] More types of optimizations
 - [ ] Initial language design
