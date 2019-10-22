@@ -34,7 +34,8 @@ CFLAGS_OPT = $(CFLAGS_BASE) -O3 -ffunction-sections -fdata-sections -fPIC -ggdb 
 CFLAGS_DEBUG = $(CFLAGS_BASE) -O0 -pg -ggdb -fPIC
 
 # LDFLAGS generation
-LDFLAGS+=$(DPDK_LDFLAGS) -lm -lrt -lnuma -lpcap -fPIC $(FLTO) 
+GSLFLAGS += -lgsl -lgslcblas
+LDFLAGS+=$(DPDK_LDFLAGS) $(GSLFLAGS) -lm -lrt -lnuma -lpcap -fPIC $(FLTO) 
 
 # Linker flags
 UNAME_S := $(shell uname -s)
