@@ -3,11 +3,10 @@ measurement
 routing
 checksum
 
-[benchmark-name]
+[opt-name]
+my-opt
 
 [params]
-src_port
-dst_port
 
 [optimizations]
 loop-unrolling

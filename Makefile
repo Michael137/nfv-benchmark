@@ -169,3 +169,7 @@ rxer: $(RXER_OBJ)
 rxer-test: $(RXER_TEST_OBJ)
 	@mkdir -p $(BIN_DIR)
 	@$(CC) -o $(BIN_DIR)/$@ $^ $(LDFLAGS) $(CFLAGS) $(EXTRA) -ldl
+
+.PHONY:
+generate:
+	python3 optgen.py
