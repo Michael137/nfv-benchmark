@@ -35,8 +35,8 @@ def gen_headers(headers, f):
     print('#include "element.h"',file=f)
     print('#include "packets.h"',file=f)
     print('#include "util.h"',file=f)
-    print('#include "elements/measurement.h"',file=f)
-    print('#include "elements/routing.h"',file=f)
+    print('#include "checksum.h"',file=f)
+    print('#include "rte_prefetch.h"',file=f)
     for h in headers:
         print('#include "{}"'.format(h),file=f)
 
@@ -101,13 +101,13 @@ def gen_create_fn(spec, f):
     opt_type = 'struct {}_t'.format(opt_name)
     fn_name = '{}_create'.format(opt_name)
 
-    print('#include "elements/_{}.h"'.format(opt_name),file=f)
+    print('#include "elements/{}.h"'.format(opt_name),file=f)
 
     print('#define MPF_SIZE 16',file=f)
     print('#define MPF_SIZE_HALF ( MPF_SIZE >> 1 )',file=f)
     print('#define MPF_TBL_SIZE ( 1 << 18 )',file=f)
 
-    print('{} {}(uint32_t src, uint32_t dst, uint32_t srcdst_port).'.format(opt_type, fn_name),file=f)
+    print('{}* {}(uint32_t src, uint32_t dst, uint32_t srcdst_port)'.format(opt_type, fn_name),file=f)
     print("{",file=f)
     print('{}* {} = ({}*) mem_alloc(sizeof({}));'.format(opt_type, opt_name, opt_type,opt_type),file=f)
     print('memset({}, 0, sizeof({}));'.format(opt_name,opt_type),file=f)
@@ -115,10 +115,10 @@ def gen_create_fn(spec, f):
     print('{}->element.process    = {}_process   ;'.format(opt_name,opt_name),file=f)
     print('{}->element.release    = {}_release   ;'.format(opt_name,opt_name),file=f)
     print('{}->element.report     = {}_report    ;'.format(opt_name,opt_name),file=f)
-    print('{}->element.connect    = element_connect   ;',file=f)
-    print('{}->element.disconnect = element_disconnect;',file=f)
-    print('{}->element.hop_at     = element_hop_at    ;',file=f)
-    print('\n// Set up measurement pool\n',file=f)
+    print('{}->element.connect    = element_connect   ;'.format(opt_name),file=f)
+    print('{}->element.disconnect = element_disconnect;'.format(opt_name),file=f)
+    print('{}->element.hop_at     = element_hop_at    ;'.format(opt_name),file=f)
+    print('// Set up measurement pool',file=f)
     print('{}->tbl_size = ge_pow2_64(MPF_TBL_SIZE);'.format(opt_name),file=f)
     print('{}->tbl = mem_alloc(sizeof(uint32_t) * {}->tbl_size);'.format(opt_name,opt_name),file=f)
     print('memset( {}->tbl, 0, sizeof( uint32_t ) * {}->tbl_size );'.format(opt_name,opt_name),file=f)
@@ -128,7 +128,7 @@ def gen_create_fn(spec, f):
     print('{}->_tmp_2 = 0;'.format(opt_name),file=f)
     print('{}->slowpass_count = 0;'.format(opt_name),file=f)
     print('return ' + opt_name + ';',file=f)
-    print("}\n",file=f)
+    print("}",file=f)
 
 def gen_release_fn(spec, f):
     opt_name = spec['opt-name'][0].replace("-", "_")
@@ -155,14 +155,14 @@ def gen_release_fn(spec, f):
     print('}',file=f)
     print('mem_release( ele );',file=f)
 
-    print('}\n',file=f)
+    print('}',file=f)
 
 def gen_report_fn(spec,f):
     opt_name = spec['opt-name'][0].replace("-", "_")
     fn_name = '{}_report'.format(opt_name)
     print('void {}( __attribute__( ( unused ) ) struct element_t* _ )'.format(fn_name),file=f)
     print('{',file=f)
-    print('}\n',file=f)
+    print('}',file=f)
 
 def gen_process_fn(parsed,f):
     opt_name = parsed['opt-name'][0].replace("-", "_")
@@ -171,7 +171,7 @@ def gen_process_fn(parsed,f):
 
     print('void {}(struct element_t* ele, struct packet_t** pkts, packet_index_t size)'.format(fn_name),file=f)
     print('{',file=f)
-    print('struct {}* self = ({}*) ele;'.format(opt_type,opt_type),file=f)
+    print('{}* self = ({}*) ele;'.format(opt_type,opt_type),file=f)
 
     # Prefetching pattern
     print('struct packet_t* pkt;',file=f);
@@ -197,7 +197,7 @@ def gen_process_fn(parsed,f):
     print('}',file=f)
 
     # Main processing loop
-    print('uint32_t a, b, c;',file=f)
+    print('uint32_t src, dst, srcdst_port;',file=f)
     print('uint32_t fastpass_count = 0;',file=f)
     print('src = self->a;',file=f)
     print('dst = self->b;',file=f)
@@ -241,7 +241,6 @@ def gen_process_fn(parsed,f):
     print('		out = util_hash_ret( &ip, sizeof( ip ) );',file=f)
     print('		out &= ( (MPF_TBL_SIZE)-1 );',file=f)
     print('		hashes[j] = out;',file=f)
-    print('		// rte_prefetch0(self->tbl + out);',file=f)
     print('		struct _routing_tbl_entry_t* ent',file=f)
     print('		    = routing_entry_find( self, ip.dst );',file=f)
     print('		if( ent )',file=f)
@@ -290,7 +289,6 @@ def gen_process_fn(parsed,f):
     print('	ip.srcdst_port = *( (uint32_t*)( pkt->hdr + 14 + 12 + 8 ) );',file=f)
     print('	out = util_hash_ret( &ip, sizeof( ip ) );',file=f)
     print('	out &= ( (MPF_TBL_SIZE)-1 );',file=f)
-    print('	// rte_prefetch0(self->tbl + out);',file=f)
     print('	hashes[j] = out;',file=f)
     print('	struct _routing_tbl_entry_t* ent = routing_entry_find( self, ip.dst );',file=f)
     print('	if( ent )',file=f)
@@ -307,21 +305,31 @@ def gen_process_fn(parsed,f):
     print('self->slowpass_count += sidx;',file=f)
     print('self->_tmp_2 += fastpass_count;',file=f)
     print('element_dispatch( ele, 0, pkts, size );',file=f)
-    print('}\\n',file=f)
+    print('}',file=f)
 
 # Main
 parsed,headers = parse()
 
 opt_name = parsed['opt-name'][0].replace("-", "_")
 
+if 'include-dir' in parsed:
+	include_path = parsed['include-dir'][0][:-1]
+else:
+	include_path = '.'
+
+if 'src-dir' in parsed:
+	src_path = parsed['src-dir'][0][:-1]
+else:
+	src_path = '.'
+
 # Generate new include file
-finclude = open('_{}.h'.format(opt_name),'w')
+finclude = open('{}/{}.h'.format(include_path,opt_name),'w')
 gen_include_file(parsed,finclude)
 finclude.close()
 
 # Create new optimization source file and open it in append mode
-open('_{}.c'.format(opt_name),'w').close()
-fsrc = open('_{}.c'.format(opt_name), 'a')
+open('{}/{}.c'.format(src_path,opt_name),'w').close()
+fsrc = open('{}/{}.c'.format(src_path,opt_name), 'a')
 gen_headers(headers,fsrc)
 gen_create_fn(parsed,fsrc)
 gen_process_fn(parsed,fsrc);

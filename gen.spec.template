@@ -4,7 +4,7 @@ routing
 checksum
 
 [opt-name]
-my-opt
+merged_fastpass
 
 [params]
 
@@ -12,3 +12,8 @@ my-opt
 loop-unrolling
 loop-splitting
 prefetching
+
+[include-dir]
+./
+[src-dir]
+./
