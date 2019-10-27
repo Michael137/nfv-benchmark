@@ -215,7 +215,7 @@ def gen_process_fn(parsed,f):
         print('		rte_prefetch0( p[j + MPF_SIZE_HALF]->hdr + 26 );', file=f)
     print('	}', file=f)
 
-    # Loop splitting
+    # Loop splitting: Loop 1
     print('	for( int j = 0; j < MPF_SIZE_HALF; ++j )',file=f)
     print('	{',file=f)
     print('		pkt            = p[j];',file=f)
@@ -235,7 +235,7 @@ def gen_process_fn(parsed,f):
     print('		{',file=f)
     print('			self->port_count += ent->port;',file=f)
     print('			ent->count++;',file=f)
-    print('		}',file=f)
+    print('             }',file=f)
 
     # Checksum
     print('		self->checksum_count += checksum( pkt->hdr, pkt->size );',file=f)
@@ -246,35 +246,36 @@ def gen_process_fn(parsed,f):
     print('             }',file=f)
     print(' }',file=f)
 
+    # Loop splitting: Loop 2
     # Routing
-    print('i -= MPF_SIZE_HALF;',file=f)
-    print('for( int j = i; j < size; ++j )',file=f)
-    print('{',file=f)
-    print('	pkt            = pkts[j];',file=f)
-    print('	ip.src         = *( (ipv4_t*)( pkt->hdr + 14 + 12 ) );',file=f)
-    print('	ip.dst         = *( (ipv4_t*)( pkt->hdr + 14 + 12 + 4 ) );',file=f)
-    print('	ip.srcdst_port = *( (uint32_t*)( pkt->hdr + 14 + 12 + 8 ) );',file=f)
+    print('     i -= MPF_SIZE_HALF;',file=f)
+    print('     for( int j = i; j < size; ++j )',file=f)
+    print('     {',file=f)
+    print('     	pkt            = pkts[j];',file=f)
+    print('     	ip.src         = *( (ipv4_t*)( pkt->hdr + 14 + 12 ) );',file=f)
+    print('     	ip.dst         = *( (ipv4_t*)( pkt->hdr + 14 + 12 + 4 ) );',file=f)
+    print('     	ip.srcdst_port = *( (uint32_t*)( pkt->hdr + 14 + 12 + 8 ) );',file=f)
 
-    print('	out = util_hash_ret( &ip, sizeof( ip ) );',file=f)
-    print('	out &= ( (MPF_TBL_SIZE)-1 );',file=f)
-    print('	hashes[j - i] = out;',file=f)
-    print('	struct _routing_tbl_entry_t* ent = routing_entry_find( self, ip.dst );',file=f)
-    print('	if( ent )',file=f)
-    print('	{',file=f)
-    print('		self->port_count += ent->port;',file=f)
-    print('		ent->count++;',file=f)
-    print('	}',file=f)
+    print('     	out = util_hash_ret( &ip, sizeof( ip ) );',file=f)
+    print('     	out &= ( (MPF_TBL_SIZE)-1 );',file=f)
+    print('     	hashes[j - i] = out;',file=f)
+    print('     	struct _routing_tbl_entry_t* ent = routing_entry_find( self, ip.dst );',file=f)
+    print('     	if( ent )',file=f)
+    print('     	{',file=f)
+    print('     		self->port_count += ent->port;',file=f)
+    print('     		ent->count++;',file=f)
+    print('     	}',file=f)
 
     # Checksum
-    print('	self->checksum_count += checksum( pkt->hdr, pkt->size );',file=f)
-    print('}',file=f)
+    print('	    self->checksum_count += checksum( pkt->hdr, pkt->size );',file=f)
+    print('     }',file=f)
 
-    print('for( int j = i; j < size; ++j )',file=f)
-    print('{',file=f)
-    print('	self->tbl[hashes[j - i]]++;',file=f)
-    print('}',file=f)
-    print('element_dispatch( ele, 0, pkts, size );',file=f)
-    print('}',file=f)
+    print('     for( int j = i; j < size; ++j )',file=f)
+    print('     {',file=f)
+    print('     	self->tbl[hashes[j - i]]++;',file=f)
+    print('     }',file=f)
+    print('     element_dispatch( ele, 0, pkts, size );',file=f)
+    print(' }',file=f)
 
     # Close process function
     print('}',file=f)
