@@ -240,9 +240,9 @@ def gen_process_fn(parsed,f):
     # Checksum
     print('		self->checksum_count += checksum( pkt->hdr, pkt->size );',file=f)
 
-    print('             for (int j = 0; j < MP_SIZE_HALF; ++j) {',file=f)
+    print('             for (int j = 0; j < MPF_SIZE_HALF; ++j) {',file=f)
     print('                 self->tbl[hashes[j]]++;',file=f)
-    print('                 p[j] = p[j + MP_SIZE_HALF];',file=f)
+    print('                 p[j] = p[j + MPF_SIZE_HALF];',file=f)
     print('             }',file=f)
     print(' }',file=f)
 
@@ -274,6 +274,9 @@ def gen_process_fn(parsed,f):
     print('	self->tbl[hashes[j - i]]++;',file=f)
     print('}',file=f)
     print('element_dispatch( ele, 0, pkts, size );',file=f)
+    print('}',file=f)
+
+    # Close process function
     print('}',file=f)
 
 # Main
