@@ -4,14 +4,14 @@ routing
 checksum
 
 [opt-name]
-merged_fastpass
+merged
 
 [params]
 
 [optimizations]
-loop-unrolling
-loop-splitting
-prefetching
+prefetch
+loop-split
+loop-unroll
 
 [include-dir]
 ./

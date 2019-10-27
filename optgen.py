@@ -25,6 +25,13 @@ def parse(spec_path='gen.spec.template'):
         print('Failed to parse {}. No "opt-name" section found.'.format(spec_path))
         exit(1)
 
+    if 'optimizations' not in sections:
+        print('Failed to parse {}. No "optimizations" section found.'.format(spec_path))
+        exit(1)
+
+    if 'prefetch' in sections['optimizations']:
+        headers.append("rte_prefetch.h")
+
     return (sections,headers)
 
 # headers: list of header names
@@ -36,7 +43,6 @@ def gen_headers(headers, f):
     print('#include "packets.h"',file=f)
     print('#include "util.h"',file=f)
     print('#include "checksum.h"',file=f)
-    print('#include "rte_prefetch.h"',file=f)
     for h in headers:
         print('#include "{}"'.format(h),file=f)
 
@@ -103,9 +109,9 @@ def gen_create_fn(spec, f):
 
     print('#include "elements/{}.h"'.format(opt_name),file=f)
 
-    print('#define MPF_SIZE 16',file=f)
+    print('#define MPF_SIZE 32',file=f)
     print('#define MPF_SIZE_HALF ( MPF_SIZE >> 1 )',file=f)
-    print('#define MPF_TBL_SIZE ( 1 << 18 )',file=f)
+    print('#define MPF_TBL_SIZE ( 1 << 24 )',file=f)
 
     print('{}* {}(uint32_t src, uint32_t dst, uint32_t srcdst_port)'.format(opt_type, fn_name),file=f)
     print("{",file=f)
@@ -122,11 +128,8 @@ def gen_create_fn(spec, f):
     print('{}->tbl_size = ge_pow2_64(MPF_TBL_SIZE);'.format(opt_name),file=f)
     print('{}->tbl = mem_alloc(sizeof(uint32_t) * {}->tbl_size);'.format(opt_name,opt_name),file=f)
     print('memset( {}->tbl, 0, sizeof( uint32_t ) * {}->tbl_size );'.format(opt_name,opt_name),file=f)
-    print('{}->a = src;'.format(opt_name),file=f)
-    print('{}->b = dst;'.format(opt_name),file=f)
-    print('{}->c = srcdst_port;'.format(opt_name),file=f)
-    print('{}->_tmp_2 = 0;'.format(opt_name),file=f)
-    print('{}->slowpass_count = 0;'.format(opt_name),file=f)
+
+    print('// Setup checksum: nop', file=f)
     print('return ' + opt_name + ';',file=f)
     print("}",file=f)
 
@@ -146,8 +149,6 @@ def gen_release_fn(spec, f):
     print('}',file=f)
 
     print('printf( "Total number of packets processed: %lu\\n", total );',file=f)
-    print('printf( "Total number of fastpass packets: %lu\\n", self->_tmp_2 );',file=f)
-    print('printf( "Total number of slowpass packets: %lu\\n", self->slowpass_count );',file=f)
 
     print('if( self->tbl )',file=f)
     print('{',file=f)
@@ -193,16 +194,13 @@ def gen_process_fn(parsed,f):
     print('for( int j = 0; j < MPF_SIZE_HALF; ++j )',file=f)
     print('{',file=f)
     print('	p[j] = pkts[j];',file=f)
-    print('	rte_prefetch0( p[j]->hdr + 26 );',file=f)
+
+    if 'prefetch' in parsed['optimizations']:
+        print('	rte_prefetch0( p[j]->hdr + 26 );',file=f)
+
     print('}',file=f)
 
     # Main processing loop
-    print('uint32_t src, dst, srcdst_port;',file=f)
-    print('uint32_t fastpass_count = 0;',file=f)
-    print('src = self->a;',file=f)
-    print('dst = self->b;',file=f)
-    print('srcdst_port = self->c;',file=f)
-    print('struct packet_t* slow[MPF_SIZE];', file=f)
     print('uint32_t out = 0;', file=f)
     print('int i = MPF_SIZE_HALF;', file=f)
     print('for( ; i < size - MPF_SIZE_HALF; i += MPF_SIZE_HALF )', file=f)
@@ -212,35 +210,25 @@ def gen_process_fn(parsed,f):
     print('		p[j + MPF_SIZE_HALF] = pkts[i + j];', file=f)
 
     # Prefetching
-    print('		// Prefetch the next set of packets', file=f)
-    print('		rte_prefetch0( p[j + MPF_SIZE_HALF]->hdr + 26 );', file=f)
+    if 'prefetch' in parsed['optimizations']:
+        print('		// Prefetch the next set of packets', file=f)
+        print('		rte_prefetch0( p[j + MPF_SIZE_HALF]->hdr + 26 );', file=f)
     print('	}', file=f)
 
     # Loop splitting
-    print('	uint32_t sidx = 0;',file=f)
     print('	for( int j = 0; j < MPF_SIZE_HALF; ++j )',file=f)
     print('	{',file=f)
     print('		pkt            = p[j];',file=f)
     print('		ip.src         = *( (ipv4_t*)( pkt->hdr + 14 + 12 ) );',file=f)
     print('		ip.dst         = *( (ipv4_t*)( pkt->hdr + 14 + 12 + 4 ) );',file=f)
     print('		ip.srcdst_port = *( (uint32_t*)( pkt->hdr + 14 + 12 + 8 ) );',file=f)
-    print('		slow[sidx++] = pkt;',file=f)
-    print('		uint32_t is_fast',file=f)
-    print('		    = ( ip.src == src ) && ( ip.dst == dst ) && ( ip.srcdst_port == srcdst_port );',file=f)
-    print('		sidx -= ( is_fast );',file=f)
-    print('		fastpass_count += is_fast;',file=f)
-    print('		self->checksum_count += checksum( pkt->hdr, pkt->size );',file=f)
-    print('	}',file=f)
-
-    print('	for( uint32_t j = 0; j < sidx; ++j )',file=f)
-    print('	{',file=f)
-    print('		pkt            = slow[j];',file=f)
-    print('		ip.src         = *( (ipv4_t*)( pkt->hdr + 14 + 12 ) );',file=f)
-    print('		ip.dst         = *( (ipv4_t*)( pkt->hdr + 14 + 12 + 4 ) );',file=f)
-    print('		ip.srcdst_port = *( (uint32_t*)( pkt->hdr + 14 + 12 + 8 ) );',file=f)
     print('		out = util_hash_ret( &ip, sizeof( ip ) );',file=f)
     print('		out &= ( (MPF_TBL_SIZE)-1 );',file=f)
     print('		hashes[j] = out;',file=f)
+    if 'prefetch' in parsed['optimizations']:
+        print('		rte_prefetch0(self->tbl + out);',file=f)
+
+    # Routing
     print('		struct _routing_tbl_entry_t* ent',file=f)
     print('		    = routing_entry_find( self, ip.dst );',file=f)
     print('		if( ent )',file=f)
@@ -248,62 +236,43 @@ def gen_process_fn(parsed,f):
     print('			self->port_count += ent->port;',file=f)
     print('			ent->count++;',file=f)
     print('		}',file=f)
-    print('	}',file=f)
-
-    print('	for( uint32_t j = 0; j < sidx; ++j )',file=f)
-    print('	{',file=f)
-    print('		self->tbl[hashes[j]]++;',file=f)
-    print('	}',file=f)
-
-    # Loop splitting
-    print('	self->slowpass_count += sidx;',file=f)
-    print('	for( int j = 0; j < MPF_SIZE_HALF; ++j )',file=f)
-    print('	{',file=f)
-    print('		p[j] = p[j + MPF_SIZE_HALF];',file=f)
-    print('	}',file=f)
-    print('}',file=f)
 
     # Checksum
+    print('		self->checksum_count += checksum( pkt->hdr, pkt->size );',file=f)
+
+    print('             for (int j = 0; j < MP_SIZE_HALF; ++j) {',file=f)
+    print('                 self->tbl[hashes[j]]++;',file=f)
+    print('                 p[j] = p[j + MP_SIZE_HALF];',file=f)
+    print('             }',file=f)
+    print(' }',file=f)
+
+    # Routing
     print('i -= MPF_SIZE_HALF;',file=f)
-    print('uint32_t sidx = 0;',file=f)
     print('for( int j = i; j < size; ++j )',file=f)
     print('{',file=f)
     print('	pkt            = pkts[j];',file=f)
     print('	ip.src         = *( (ipv4_t*)( pkt->hdr + 14 + 12 ) );',file=f)
     print('	ip.dst         = *( (ipv4_t*)( pkt->hdr + 14 + 12 + 4 ) );',file=f)
     print('	ip.srcdst_port = *( (uint32_t*)( pkt->hdr + 14 + 12 + 8 ) );',file=f)
-    print('	slow[sidx++] = pkt;',file=f)
-    print('	uint32_t is_fast',file=f)
-    print('	    = ( ip.src == src ) && ( ip.dst == dst ) && ( ip.srcdst_port == srcdst_port );',file=f)
-    print('	sidx -= ( is_fast );',file=f)
-    print('	fastpass_count += is_fast;',file=f)
-    print('	self->checksum_count += checksum( pkt->hdr, pkt->size );',file=f)
-    print('}',file=f)
 
-    # Routing
-    print('for( uint32_t j = 0; j < sidx; ++j )',file=f)
-    print('{',file=f)
-    print('	pkt            = slow[j];',file=f)
-    print('	ip.src         = *( (ipv4_t*)( pkt->hdr + 14 + 12 ) );',file=f)
-    print('	ip.dst         = *( (ipv4_t*)( pkt->hdr + 14 + 12 + 4 ) );',file=f)
-    print('	ip.srcdst_port = *( (uint32_t*)( pkt->hdr + 14 + 12 + 8 ) );',file=f)
     print('	out = util_hash_ret( &ip, sizeof( ip ) );',file=f)
     print('	out &= ( (MPF_TBL_SIZE)-1 );',file=f)
-    print('	hashes[j] = out;',file=f)
+    print('	hashes[j - i] = out;',file=f)
     print('	struct _routing_tbl_entry_t* ent = routing_entry_find( self, ip.dst );',file=f)
     print('	if( ent )',file=f)
     print('	{',file=f)
     print('		self->port_count += ent->port;',file=f)
     print('		ent->count++;',file=f)
     print('	}',file=f)
+
+    # Checksum
+    print('	self->checksum_count += checksum( pkt->hdr, pkt->size );',file=f)
     print('}',file=f)
 
-    print('for( uint32_t j = 0; j < sidx; ++j )',file=f)
+    print('for( int j = i; j < size; ++j )',file=f)
     print('{',file=f)
-    print('	self->tbl[hashes[j]]++;',file=f)
+    print('	self->tbl[hashes[j - i]]++;',file=f)
     print('}',file=f)
-    print('self->slowpass_count += sidx;',file=f)
-    print('self->_tmp_2 += fastpass_count;',file=f)
     print('element_dispatch( ele, 0, pkts, size );',file=f)
     print('}',file=f)
 
