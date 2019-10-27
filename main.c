@@ -30,11 +30,11 @@ void test_benchmark(char const *name) {
     struct packet_pool_t *pool = packets_pool_create(packet_count, PACKET_SIZE);
 
     // Create a zipfian distribution for source/destination ip address
-    // packets_pool_zipfian(pool, 0, packet_count - 1, 26, 8, 0.5);
+    packets_pool_zipfian(pool, 0, packet_count - 1, 26, 8, 0.5);
 
-    poisson_init();
-    packets_pool_poisson(pool, 0, packet_count - 1, 26, 8, 0.5);
-    poisson_fini();
+    // poisson_init();
+    // packets_pool_poisson(pool, 0, packet_count - 1, 26, 8, 0.5);
+    // poisson_fini();
 
     // Compile and load the checksum-drop module
     struct jit_t jit = {0};

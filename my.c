@@ -17,6 +17,9 @@
 #include "rte_cycles.h"
 #include "rte_prefetch.h"
 
+#include "poisson.h"
+#include "optgen.h"
+
 int datapath_init(int argc, char **argv, struct dataplane_port_t **port);
 void datapath_teardown(struct dataplane_port_t *port);
 /* TODO:
@@ -97,27 +100,29 @@ void datapath_teardown(struct dataplane_port_t *port) {
 
 int main(int argc, char **argv) {
     // Deterministic experiments are the best experiments - one can only hope.
-    srand(0);
+//    srand(0);
+//
+//    struct dataplane_port_t *port = 0;
+//    int ret = datapath_init(argc, argv, &port);
+//    argc -= ret;
+//    argv += ret;
+//
+//    if (!port) 
+//        return 0;
+//
+//    test_benchmark("checksum-checksum");
+//    test_benchmark("checksum-drop");
+//    test_benchmark("checksum-rfile");
+//    test_benchmark("checksum-routing");
+//    test_benchmark("mea_checksum-rfile");
+//    test_benchmark("mea_rfile-checksum");
+//    test_benchmark("measurement-drop");
+//    test_benchmark("rfile_checksum-mea");
+//    test_benchmark("rfile-drop");
+//    //test_benchmark("routing-drop");
+//    
+//    datapath_teardown(port);
 
-    struct dataplane_port_t *port = 0;
-    int ret = datapath_init(argc, argv, &port);
-    argc -= ret;
-    argv += ret;
-
-    if (!port) 
-        return 0;
-
-    test_benchmark("checksum-checksum");
-    test_benchmark("checksum-drop");
-    test_benchmark("checksum-rfile");
-    test_benchmark("checksum-routing");
-    test_benchmark("mea_checksum-rfile");
-    test_benchmark("mea_rfile-checksum");
-    test_benchmark("measurement-drop");
-    test_benchmark("rfile_checksum-mea");
-    test_benchmark("rfile-drop");
-    //test_benchmark("routing-drop");
-    
-    datapath_teardown(port);
+	parse_spec();
     return 0;
 }
