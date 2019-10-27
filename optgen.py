@@ -94,7 +94,7 @@ def gen_include_file(spec,f):
     print('};',file=f)
 
     # Prototypes for functions to generate
-    print( '{}* {}_create(uint32_t, uint32_t, uint32_t);'.format(opt_type, opt_name),file=f)
+    print( '{}* {}_create(void);'.format(opt_type, opt_name),file=f)
     print( 'void {}_process(struct element_t*, struct packet_t**, packet_index_t);'.format(opt_name),file=f)
     print( 'void {}_release(struct element_t*);'.format(opt_name),file=f)
     print( 'void {}_report(struct element_t*);'.format(opt_name),file=f)
@@ -113,7 +113,7 @@ def gen_create_fn(spec, f):
     print('#define MPF_SIZE_HALF ( MPF_SIZE >> 1 )',file=f)
     print('#define MPF_TBL_SIZE ( 1 << 24 )',file=f)
 
-    print('{}* {}(uint32_t src, uint32_t dst, uint32_t srcdst_port)'.format(opt_type, fn_name),file=f)
+    print('{}* {}(void)'.format(opt_type, fn_name),file=f)
     print("{",file=f)
     print('{}* {} = ({}*) mem_alloc(sizeof({}));'.format(opt_type, opt_name, opt_type,opt_type),file=f)
     print('memset({}, 0, sizeof({}));'.format(opt_name,opt_type),file=f)
