@@ -9,6 +9,7 @@ merged
 [params]
 
 [optimizations]
+batching
 prefetch
 loop-split
 loop-unroll

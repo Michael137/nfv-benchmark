@@ -218,6 +218,9 @@ def gen_process_fn(parsed,f):
     # Loop splitting: Loop 1
     print('	for( int j = 0; j < MPF_SIZE_HALF; ++j )',file=f)
     print('	{',file=f)
+
+    # Measurement
+    # Opt: batching
     print('		pkt            = p[j];',file=f)
     print('		ip.src         = *( (ipv4_t*)( pkt->hdr + 14 + 12 ) );',file=f)
     print('		ip.dst         = *( (ipv4_t*)( pkt->hdr + 14 + 12 + 4 ) );',file=f)
@@ -225,6 +228,8 @@ def gen_process_fn(parsed,f):
     print('		out = util_hash_ret( &ip, sizeof( ip ) );',file=f)
     print('		out &= ( (MPF_TBL_SIZE)-1 );',file=f)
     print('		hashes[j] = out;',file=f)
+
+    # Opt: prefetching
     if 'prefetch' in parsed['optimizations']:
         print('		rte_prefetch0(self->tbl + out);',file=f)
 
@@ -247,18 +252,20 @@ def gen_process_fn(parsed,f):
     print(' }',file=f)
 
     # Loop splitting: Loop 2
-    # Routing
     print('     i -= MPF_SIZE_HALF;',file=f)
     print('     for( int j = i; j < size; ++j )',file=f)
     print('     {',file=f)
+
+    # Measurement
     print('     	pkt            = pkts[j];',file=f)
     print('     	ip.src         = *( (ipv4_t*)( pkt->hdr + 14 + 12 ) );',file=f)
     print('     	ip.dst         = *( (ipv4_t*)( pkt->hdr + 14 + 12 + 4 ) );',file=f)
     print('     	ip.srcdst_port = *( (uint32_t*)( pkt->hdr + 14 + 12 + 8 ) );',file=f)
-
     print('     	out = util_hash_ret( &ip, sizeof( ip ) );',file=f)
     print('     	out &= ( (MPF_TBL_SIZE)-1 );',file=f)
     print('     	hashes[j - i] = out;',file=f)
+
+    # Routing
     print('     	struct _routing_tbl_entry_t* ent = routing_entry_find( self, ip.dst );',file=f)
     print('     	if( ent )',file=f)
     print('     	{',file=f)
