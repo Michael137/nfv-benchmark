@@ -192,37 +192,31 @@ def gen_process_fn(parsed,f):
     print('		uint32_t srcdst_port;',file=f)
     print('	};',file=f)
     print('} ip;',file=f)
-    print('for( int j = 0; j < MPF_SIZE_HALF; ++j )',file=f)
-    print('{',file=f)
-    print('	p[j] = pkts[j];',file=f)
-
     if 'prefetch' in parsed['optimizations']:
-        print('	rte_prefetch0( p[j]->hdr + 26 );',file=f)
+        print('for( int j = 0; j < MPF_SIZE_HALF; ++j )',file=f)
+        print('{',file=f)
+        print('	    p[j] = pkts[j];',file=f)
+        print('	    rte_prefetch0( p[j]->hdr + 26 );',file=f)
+        print('}',file=f)
 
-    print('}',file=f)
-
-    # Main processing loop
-    # TODO: figure out use
+    # Main processing loop: splits batch into two halves: one with fixed size (MPF_SIZE_HALF) and then the rest (size)
     print('uint32_t out = 0;', file=f)
     print('int i = MPF_SIZE_HALF;', file=f)
     print('for( ; i < size - MPF_SIZE_HALF; i += MPF_SIZE_HALF )', file=f)
     print('{', file=f)
-    print('	for( int j = 0; j < MPF_SIZE_HALF && i + j < size; ++j )', file=f)
-    print('	{', file=f)
-    print('		p[j + MPF_SIZE_HALF] = pkts[i + j];', file=f)
-
     # Prefetching
     if 'prefetch' in parsed['optimizations']:
-        print('		// Prefetch the next set of packets', file=f)
+        print(' // Prefetch the next set of packets', file=f)
+        print('	for( int j = 0; j < MPF_SIZE_HALF && i + j < size; ++j )', file=f)
+        print('	{', file=f)
+        print('		p[j + MPF_SIZE_HALF] = pkts[i + j];', file=f)
         print('		rte_prefetch0( p[j + MPF_SIZE_HALF]->hdr + 26 );', file=f)
-    print('	}', file=f)
+        print('	}', file=f)
 
     # Loop splitting: Loop 1
     print('	for( int j = 0; j < MPF_SIZE_HALF; ++j )',file=f)
     print('	{',file=f)
-    # Opt: batching
     print('		pkt            = p[j];',file=f)
-
     print('		ip.src         = *( (ipv4_t*)( pkt->hdr + 14 + 12 ) );',file=f)
     print('		ip.dst         = *( (ipv4_t*)( pkt->hdr + 14 + 12 + 4 ) );',file=f)
     print('		ip.srcdst_port = *( (uint32_t*)( pkt->hdr + 14 + 12 + 8 ) );',file=f)
@@ -233,8 +227,9 @@ def gen_process_fn(parsed,f):
         print('		out &= ( (MPF_TBL_SIZE)-1 );',file=f)
         print('		hashes[j] = out;',file=f)
 
-    # Opt: prefetching
-    if 'prefetch' in parsed['optimizations']:
+    # Opt: prefetching (random access data; this is measurement module specific); probably not needed in this position
+    # TODO: should give option to prefetch hash table accesses in both loops
+    if 'prefetch' in parsed['optimizations'] and 'measurement' in parsed['nf-pipeline']:
         print('		rte_prefetch0(self->tbl + out);',file=f)
 
     # Routing
@@ -251,12 +246,12 @@ def gen_process_fn(parsed,f):
     if 'checksum' in parsed['nf-pipeline']:
         print('		self->checksum_count += checksum( pkt->hdr, pkt->size );',file=f)
 
-    # TODO: identify use
-    print('             for (int j = 0; j < MPF_SIZE_HALF; ++j) {',file=f)
+    # Measurement: fill hashes
     if 'measurement' in parsed['nf-pipeline']:
+        print('             for (int j = 0; j < MPF_SIZE_HALF; ++j) {',file=f)
         print('                 self->tbl[hashes[j]]++;',file=f)
-    print('                 p[j] = p[j + MPF_SIZE_HALF];',file=f)
-    print('             }',file=f)
+        print('                 p[j] = p[j + MPF_SIZE_HALF];',file=f)
+        print('             }',file=f)
     print(' }',file=f)
 
     # Loop splitting: Loop 2
@@ -287,9 +282,10 @@ def gen_process_fn(parsed,f):
     if 'checksum' in parsed['nf-pipeline']:
         print('	    self->checksum_count += checksum( pkt->hdr, pkt->size );',file=f)
 
-    # TODO: identify use
+    # Close Loop 2
     print('     }',file=f)
 
+    # Measurement: record hashes that were potentially prefetched ealier
     if 'measurement' in parsed['nf-pipeline']:
         print('     for( int j = i; j < size; ++j )',file=f)
         print('     {',file=f)
