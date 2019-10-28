@@ -177,7 +177,8 @@ def gen_process_fn(parsed,f):
     # Prefetching pattern
     print('struct packet_t* pkt;',file=f);
     print('struct packet_t* p[MPF_SIZE];',file=f);
-    print('uint32_t hashes[MPF_SIZE_HALF];',file=f);
+    if 'measurement' in parsed['nf-pipeline']:
+        print('uint32_t hashes[MPF_SIZE_HALF];',file=f);
     print('struct __attribute__( ( packed ) )',file=f)
     print('{',file=f)
     print('	ipv4_t src;',file=f)
@@ -201,6 +202,7 @@ def gen_process_fn(parsed,f):
     print('}',file=f)
 
     # Main processing loop
+    # TODO: figure out use
     print('uint32_t out = 0;', file=f)
     print('int i = MPF_SIZE_HALF;', file=f)
     print('for( ; i < size - MPF_SIZE_HALF; i += MPF_SIZE_HALF )', file=f)
@@ -218,14 +220,15 @@ def gen_process_fn(parsed,f):
     # Loop splitting: Loop 1
     print('	for( int j = 0; j < MPF_SIZE_HALF; ++j )',file=f)
     print('	{',file=f)
+    # Opt: batching
+    print('		pkt            = p[j];',file=f)
+
+    print('		ip.src         = *( (ipv4_t*)( pkt->hdr + 14 + 12 ) );',file=f)
+    print('		ip.dst         = *( (ipv4_t*)( pkt->hdr + 14 + 12 + 4 ) );',file=f)
+    print('		ip.srcdst_port = *( (uint32_t*)( pkt->hdr + 14 + 12 + 8 ) );',file=f)
 
     # Measurement
     if 'measurement' in parsed['nf-pipeline']:
-        # Opt: batching
-        print('		pkt            = p[j];',file=f)
-        print('		ip.src         = *( (ipv4_t*)( pkt->hdr + 14 + 12 ) );',file=f)
-        print('		ip.dst         = *( (ipv4_t*)( pkt->hdr + 14 + 12 + 4 ) );',file=f)
-        print('		ip.srcdst_port = *( (uint32_t*)( pkt->hdr + 14 + 12 + 8 ) );',file=f)
         print('		out = util_hash_ret( &ip, sizeof( ip ) );',file=f)
         print('		out &= ( (MPF_TBL_SIZE)-1 );',file=f)
         print('		hashes[j] = out;',file=f)
@@ -250,7 +253,8 @@ def gen_process_fn(parsed,f):
 
     # TODO: identify use
     print('             for (int j = 0; j < MPF_SIZE_HALF; ++j) {',file=f)
-    print('                 self->tbl[hashes[j]]++;',file=f)
+    if 'measurement' in parsed['nf-pipeline']:
+        print('                 self->tbl[hashes[j]]++;',file=f)
     print('                 p[j] = p[j + MPF_SIZE_HALF];',file=f)
     print('             }',file=f)
     print(' }',file=f)
@@ -260,12 +264,12 @@ def gen_process_fn(parsed,f):
     print('     for( int j = i; j < size; ++j )',file=f)
     print('     {',file=f)
 
+    print('     	pkt            = pkts[j];',file=f)
+    print('     	ip.src         = *( (ipv4_t*)( pkt->hdr + 14 + 12 ) );',file=f)
+    print('     	ip.dst         = *( (ipv4_t*)( pkt->hdr + 14 + 12 + 4 ) );',file=f)
+    print('     	ip.srcdst_port = *( (uint32_t*)( pkt->hdr + 14 + 12 + 8 ) );',file=f)
     # Measurement
     if 'measurement' in parsed['nf-pipeline']:
-        print('     	pkt            = pkts[j];',file=f)
-        print('     	ip.src         = *( (ipv4_t*)( pkt->hdr + 14 + 12 ) );',file=f)
-        print('     	ip.dst         = *( (ipv4_t*)( pkt->hdr + 14 + 12 + 4 ) );',file=f)
-        print('     	ip.srcdst_port = *( (uint32_t*)( pkt->hdr + 14 + 12 + 8 ) );',file=f)
         print('     	out = util_hash_ret( &ip, sizeof( ip ) );',file=f)
         print('     	out &= ( (MPF_TBL_SIZE)-1 );',file=f)
         print('     	hashes[j - i] = out;',file=f)
@@ -286,10 +290,11 @@ def gen_process_fn(parsed,f):
     # TODO: identify use
     print('     }',file=f)
 
-    print('     for( int j = i; j < size; ++j )',file=f)
-    print('     {',file=f)
-    print('     	self->tbl[hashes[j - i]]++;',file=f)
-    print('     }',file=f)
+    if 'measurement' in parsed['nf-pipeline']:
+        print('     for( int j = i; j < size; ++j )',file=f)
+        print('     {',file=f)
+        print('     	self->tbl[hashes[j - i]]++;',file=f)
+        print('     }',file=f)
     print('     element_dispatch( ele, 0, pkts, size );',file=f)
     print(' }',file=f)
 
