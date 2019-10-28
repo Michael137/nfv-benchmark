@@ -1,7 +1,7 @@
-[pipelines]
+[nf-pipeline]
 measurement
-routing
 checksum
+routing
 
 [opt-name]
 merged
