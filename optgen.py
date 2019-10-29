@@ -2,6 +2,60 @@
 # Then generate optimizations file
 
 from datetime import datetime
+from enum import Enum
+
+class Opt:
+    def __init__(self, name: str):
+        self.name = name
+        self.filehandle = None
+
+    def codegen(self):
+        raise NotImplementedError
+
+    def set_filehandle(self, filehandle):
+        self.filehandle = filehandle
+
+    def print_opt(self, msg):
+        print(msg, file=self.filehandle)
+
+class PrefetchOpt(Opt):
+    def codegen(self, idx_var="i", pkt_var="p", offset=26, deref_var="hdr"):
+        print_opt('rte_prefetch0( {}[{}]->{} + {} );'.format(pkt_var, idx_var, deref_var, offset),file=f)
+
+class LoopSplitOpt(Opt):
+    def codegen(self):
+        pass
+
+class BatchOpt(Opt):
+    def codegen(self):
+        pass
+
+    def gen_batch_loop(self):
+        pass
+
+class NFType(Enum):
+    MEASUREMENT = 1
+    CHECKSUM = 2
+    ROUTING = 3
+
+class NF:
+    def __init__(self, typ: NFType):
+        self.type = typ
+        self.opts = []
+
+    def add_opt(self, opt: Opt):
+        self.opts.append(opt)
+
+    def codegen(self):
+        raise NotImplementedError
+
+def MeasurementNF(NF):
+    def __init__(self):
+        NF.__init__(self, NFType.MEASUREMENT)
+
+    def codegen(self):
+        pass
+
 
 def parse(spec_path='gen.spec.template'):
     sections = {}
