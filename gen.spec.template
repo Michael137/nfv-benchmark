@@ -1,7 +1,7 @@
 [nf-pipeline]
 measurement
-checksum
 routing
+checksum
 
 [opt-name]
 merged
@@ -12,9 +12,8 @@ merged
 batching
 prefetch
 loop-split
-loop-unroll
 
 [include-dir]
-./
+include/elements/
 [src-dir]
-./
+src/elements/
