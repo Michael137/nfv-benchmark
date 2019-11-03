@@ -56,6 +56,40 @@ def MeasurementNF(NF):
     def codegen(self):
         pass
 
+class Generator:
+    def __init__():
+        self.q_preamble = None
+        self.q_loop = None
+        self.q_main = None
+        self.q_postamble = None
+
+    # Generate functions call each other in a chain
+    # in order to properly close all blocks
+
+    # Before main loop starts: currently this is where prefetching and measurement/checksum setup happens
+    def preamble(self):
+        pass
+
+    # This is the main loop processing packets
+    # The loop will either process in batches
+    # or will be split into smaller loops within
+    # its body
+    def loop(self):
+        # Will split?
+            # Continue with next gen. step
+        # Determine batch size
+        # Continue with next gen. step
+        pass
+
+    # Generates main processing logic
+    # Consists of 1 or more loops
+    # Body of loop depends pipelines specified
+    def main(self):
+        pass
+
+    # End of NF
+    def postamble(self):
+        pass
 
 def parse(spec_path='gen.spec.template'):
     sections = {}
