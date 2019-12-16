@@ -2,7 +2,7 @@
 
 Adopted to continue project on NFV
 
-## Instructions:
+## Instructions
 - Setup DPDK in sibling directory ([zip](https://github.com/DPDK/dpdk/archive/v18.02.zip), ([docs](https://dpdk.readthedocs.io/en/v2.2.0/linux_gsg/intro.html)))
 ### Manual Installation
 * edit config/common_base
@@ -65,13 +65,13 @@ Hugepagesize:       2048 kB
 * `sudo ./testpmd -c 0xff -n 4 -- -i`
   + Try adding `-w 0000:89:00.0` to the testpmd arguments (i.e., add the port number bound with the dpdk-setup utility)
 
-## Build & Run
-* On machine 1 run
-  + `make clean all rxer`
-  + `sudo ./bin/rxer -l 1-3 -n4`
-* On machine 2 run
-  + `make clean all txer`
-  + `sudo ./bin/txer`
+### Check whether one machine can ping the other
+* Identify ethernet interface using `ifconfig`
+  + If it doesn't show up check using `ifconfig -a` and enable the interface first using e.g. `sudo ifconfig enp137s0f0 up`
+* Assign a suitable unused IP address to the interface. E.g., `sudo ifconfig enp137s0f0 172.16.0.1/16`
+* On the other machine do the same (change the IP slightly, e.g., 172.16.0.2/16)
+* Now ping one machine from the other. E.g., on the machine with IP setup to 172.16.0.2/16 run: `ping 172.16.0.1`
+  + If the above does not succeed then their possibly exists a connectivity issue between the machines
 
 ### Check whether one machine can ping the other
 * Identify ethernet interface using `ifconfig`
@@ -81,7 +81,15 @@ Hugepagesize:       2048 kB
 * Now ping one machine from the other. E.g., on the machine with IP setup to 172.16.0.2/16 run: `ping 172.16.0.1`
   + If the above does not succeed then their possibly exists a connectivity issue between the machines
 
-## Next steps:
+## Build & Run
+* On machine 1 run
+  + `make clean all rxer`
+  + `sudo ./bin/rxer -l 1-3 -n4`
+* On machine 2 run
+  + `make clean all txer`
+  + `sudo ./bin/txer`
+
+## TODOs
 - [x] Build and run anything
   - [x] Fix gcc warnings
 - [x] Run benchmarks
