@@ -81,9 +81,9 @@ class Generator:
         print('{}* self = ({}*) ele;'.format(opt_type,opt_type),file=self.f)
         # Prefetching pattern
         print('struct packet_t* pkt;',file=self.f);
-        print('struct packet_t* p[MPF_SIZE];',file=self.f);
+        print('struct packet_t* p[BATCH_SIZE];',file=self.f);
         if 'measurement' in parsed['nf-pipeline']:
-            print('uint32_t hashes[MPF_SIZE_HALF];',file=self.f);
+            print('uint32_t hashes[SUB_BATCH_SIZE];',file=self.f);
         print('struct __attribute__( ( packed ) )',file=self.f)
         print('{',file=self.f)
         print('	ipv4_t src;',file=self.f)
@@ -98,7 +98,7 @@ class Generator:
         print('	};',file=self.f)
         print('} ip;',file=self.f)
         if 'prefetch' in parsed['optimizations']:
-            print('for( int j = 0; j < MPF_SIZE_HALF; ++j )',file=self.f)
+            print('for( int j = 0; j < SUB_BATCH_SIZE; ++j )',file=self.f)
             print('{',file=self.f)
             print('	    p[j] = pkts[j];',file=self.f)
             print('	    rte_prefetch0( p[j]->hdr + 26 );',file=self.f)
@@ -113,17 +113,17 @@ class Generator:
     def loop(self):
         print('uint32_t out = 0;', file=self.f)
         if 'loop-split' in parsed['optimizations']:
-            print('int i = MPF_SIZE_HALF;', file=self.f)
-            print('for( ; i < size - MPF_SIZE_HALF; i += MPF_SIZE_HALF )', file=self.f)
+            print('int i = SUB_BATCH_SIZE;', file=self.f)
+            print('for( ; i < size - SUB_BATCH_SIZE; i += SUB_BATCH_SIZE )', file=self.f)
             print('{', file=self.f)
 
             # Prefetching
             if 'prefetch' in parsed['optimizations']:
                 print(' // Prefetch the next set of packets', file=self.f)
-                print('	for( int j = 0; j < MPF_SIZE_HALF && i + j < size; ++j )', file=self.f)
+                print('	for( int j = 0; j < SUB_BATCH_SIZE && i + j < size; ++j )', file=self.f)
                 print('	{', file=self.f)
-                print('		p[j + MPF_SIZE_HALF] = pkts[i + j];', file=self.f)
-                print('		rte_prefetch0( p[j + MPF_SIZE_HALF]->hdr + 26 );', file=self.f)
+                print('		p[j + SUB_BATCH_SIZE] = pkts[i + j];', file=self.f)
+                print('		rte_prefetch0( p[j + SUB_BATCH_SIZE]->hdr + 26 );', file=self.f)
                 print('	}', file=self.f)
         else:
             print('int i = 0;', file=self.f)
@@ -179,17 +179,19 @@ class Generator:
             # TODO: only done in first loop
             if first_loop:
                 if 'measurement' in parsed['nf-pipeline']:
-                    print('             for (int j = 0; j < MPF_SIZE_HALF; ++j) {',file=self.f)
+                    print('             for (int j = 0; j < BATCH_SIZE_HALF; ++j) {',file=self.f)
                     print('                 self->tbl[hashes[j]]++;',file=self.f)
-                    print('                 p[j] = p[j + MPF_SIZE_HALF];',file=self.f)
+                    print('                 p[j] = p[j + BATCH_SIZE_HALF];',file=self.f)
                     print('             }',file=self.f)
             print(' }',file=self.f)
 
         # TODO: do this dependent on batch size
         if 'loop-split' in parsed['optimizations']:
-            inner_loop("MPF_SIZE_HALF", first_loop = True)
-            print('     i -= MPF_SIZE_HALF;',file=self.f)
-            inner_loop("size")
+            # TODO: use SUB_BATCH_SIZE instead
+            inner_loop("BATCH_SIZE_HALF", first_loop = True)
+            for i in range(1, int(parsed['params']['proc-loops'])):
+                print('     i -= BATCH_SIZE_HALF;',file=self.f)
+                inner_loop("size")
         else:
             inner_loop("size", first_loop = True)
 
@@ -206,8 +208,9 @@ class Generator:
             print('     }',file=self.f)
         print('     element_dispatch( ele, 0, pkts, size );',file=self.f)
 
-        if 'loop-split' in parsed['nf-pipeline']:
-            print(' }',file=self.f)
+        if 'loop-split' in parsed['optimizations']:
+            for i in range(1,int(parsed['params']['proc-loops'])):
+                print('}',file=self.f)
 
         # Close process function
         print('}',file=self.f)
@@ -240,6 +243,16 @@ def parse(spec_path='gen.spec.template'):
 
     if 'prefetch' in sections['optimizations']:
         headers.append("rte_prefetch.h")
+
+    if 'params' in sections:
+        param_dict = {}
+        for kv in sections['params']:
+            [key, value] = kv.split(':')
+            param_dict[key.strip()] = value.strip()
+        sections['params'] = param_dict
+
+        if 'loop-split' in sections['optimizations']:
+            sections['params']['proc-loops'] = sections['params'].get('proc-loops', 2)
 
     return (sections,headers)
 
@@ -316,11 +329,17 @@ def gen_create_fn(spec, f):
     opt_type = 'struct {}_t'.format(opt_name)
     fn_name = '{}_create'.format(opt_name)
 
+    if 'params' in spec:
+        params = spec['params']
+    else:
+        params = {}
+
     print('#include "elements/{}.h"'.format(opt_name),file=f)
 
-    # TODO: this should be parameterized
-    print('#define MPF_SIZE 32',file=f)
-    print('#define MPF_SIZE_HALF ( MPF_SIZE >> 1 )',file=f)
+    print('#define BATCH_SIZE {} // How many packets per batch'.format(params.get('batch', 32)),file=f)
+    print('#define SPLITS {}'.format(params['proc-loops']),file=f)
+    print('#define SUB_BATCH_SIZE (BATCH_SIZE / SPLITS)',file=f)
+    print('#define BATCH_SIZE_HALF (BATCH_SIZE >> 1)',file=f)
     print('#define MPF_TBL_SIZE ( 1 << 24 )',file=f)
 
     print('{}* {}(void)'.format(opt_type, fn_name),file=f)

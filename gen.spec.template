@@ -4,16 +4,18 @@ routing
 checksum
 
 [opt-name]
-merged
+test
 
 [params]
+batch:16
+proc-loops:3
 
 [optimizations]
-batching
-prefetch
+batch
 loop-split
+prefetch
 
 [include-dir]
-include/elements/
+./
 [src-dir]
-src/elements/
+./
