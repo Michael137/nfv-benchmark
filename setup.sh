@@ -1,5 +1,7 @@
 #!/bin/bash
 
+cp patches/dpdk-18.02/common_base ../dpdk-18.02/config/common_base
+
 HOSTNAME=$(hostname)
 AUTO_CMD="./${HOSTNAME}_dpdk_auto_setup.exp"
 
