@@ -96,6 +96,7 @@ Hugepagesize:       2048 kB
 - [x] Run benchmarks
 - [ ] Automate dpdk setup
 - [ ] Merge rxer-test.c into rxer.c
+- [ ] Refactor NF creation logic and rxer/txer
 ### Language
 - [ ] Initial language design
 ### Experiments
