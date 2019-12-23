@@ -83,8 +83,8 @@ Hugepagesize:       2048 kB
 
 ## Build & Run
 * On machine 1 run
-  + `make clean all rxer`
-  + `sudo ./bin/rxer -l 1-3 -n4`
+  + `make clean all rxer-test`
+  + `sudo ./bin/rxer-test -l1-3 -n4`
 * On machine 2 run
   + `make clean all txer`
   + `sudo ./bin/txer`

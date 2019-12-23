@@ -8,6 +8,7 @@
 
 #include "elements/measurement.h"
 
+//#define MM_SIZE 20
 #define MM_SIZE 16
 #define MM_SIZE_HALF (MM_SIZE >> 1)
 #define MM_PREFETCH
