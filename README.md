@@ -90,14 +90,23 @@ Hugepagesize:       2048 kB
   + `sudo ./bin/txer`
 
 ## TODOs
+### Infrastructure
 - [x] Build and run anything
   - [x] Fix gcc warnings
 - [x] Run benchmarks
+- [ ] Automate dpdk setup
+- [ ] Merge rxer-test.c into rxer.c
+### Language
+- [ ] Initial language design
+### Experiments
 - [ ] Analyze benchmarks
   - [ ] Reproduce behaviour from paper
     - [ ] changing workload effects optimizations significantly
       - [ ] use traffic generator, e.g., iperf for benchmarks
     - [x] hand-written optimizations outperform naive (and compiler optimized) versions
-- [ ] Write custom benchmarks
-  - [ ] More types of optimizations
-- [ ] Initial language design
+- [ ] Include more types of optimizations
+- [ ] Experiment with more packet distributions
+- [ ] Be able to switch on/off different pipeline/optimization configurations
+  - [x] Write initial framework (optgen.py)
+  - [ ] Run experiments
+  - [ ] Include more complex optimizations/pipelines other than the ones from the merged benchmark
