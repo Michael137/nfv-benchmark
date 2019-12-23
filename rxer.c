@@ -124,11 +124,13 @@ int rxer(void *arg) {
 
 int datapath_init(int argc, char **argv, struct dataplane_port_t **port) {
     *port = 0;
+    char* args[] = {};
     int ret = rte_eal_init(argc, argv);
     if (ret < 0)
         rte_exit(EXIT_FAILURE, "Failed to initialize the EAL.");
 
-    const char port_name[] = PORT_NAME;
+    //const char port_name[] = PORT_NAME;
+	const char port_name[] = "0000:89:00.2";
     log_info_fmt("Num available dpdk ports: %d", rte_eth_dev_count());
 
     struct dataplane_port_t *pport = 0;
@@ -150,9 +152,15 @@ int main(int argc, char **argv) {
     srand(0);
 
     struct dataplane_port_t *port = 0;
+	char *args[] =
+		{ "-l",
+		  "1-3",
+		  "-n",
+		  "4"
+		};
     int ret = datapath_init(argc, argv, &port);
-    argc -= ret;
-    argv += ret;
+	argc -= ret;
+    	argv += ret;
 
     if (!port) 
 		return 0;

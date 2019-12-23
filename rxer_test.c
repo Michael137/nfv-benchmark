@@ -38,6 +38,24 @@ struct fll_t *g_fll = 0;
 struct rx_packet_stream *g_stream = 0;
 struct pipeline_t *g_pipe = 0;
 
+struct pipeline_t *pipeline_build(struct rx_packet_stream *stream) {
+    struct pipeline_t *pipe = pipeline_create();
+    // pipeline_element_add(pipe, el_checksum_create(MOD_BUFFER_SIZE_1));
+    pipeline_element_add(pipe, el_routing_create_with_file(
+                MOD_BUFFER_SIZE_1, "data/boza_rtr_route.lpm"));
+    // pipeline_element_add(pipe, el_measurement_create_with_size(
+    //            MOD_BUFFER_SIZE_1, 1 << 22));
+    // pipeline_element_add(pipe, el_routing_create_with_file(
+    //            MOD_BUFFER_SIZE_2, "data/boza_rtr_route.lpm"));
+    // pipeline_element_add(pipe, el_measurement_create_with_size(
+    //            MOD_BUFFER_SIZE_2, 1 << 22));
+    pipeline_element_add(pipe, el_checksum_create(MOD_BUFFER_SIZE_2));
+
+    // Drop element for mbuf packets
+    pipeline_element_add(pipe, el_drop_mbuf_create(MOD_BUFFER_SIZE_3, stream));
+    return pipe;
+}
+
 void release_resources(void) {
     if (g_pipe) {
         pipeline_release(g_pipe);
@@ -126,7 +144,7 @@ void port_boot_wait(struct dataplane_port_t *port ){
     log_info("Waiting for port to bootup.");
     while (1) {
         rte_eth_link_get_nowait(port->port_id, &link);
-        printf(".");
+        printf(". (%d)", link.link_status);
         rte_delay_ms(500);
         fflush(stdout);
         if (link.link_status == ETH_LINK_UP){
@@ -187,7 +205,8 @@ int datapath_init(int argc, char **argv, struct dataplane_port_t **port) {
     if (ret < 0)
         rte_exit(EXIT_FAILURE, "Failed to initialize the EAL.");
 
-    const char port_name[] = PORT_NAME;
+    // const char port_name[] = PORT_NAME;
+    const char port_name[] = "0000:89:00.2";
     log_info_fmt("Num available dpdk ports: %d", rte_eth_dev_count());
 
     struct dataplane_port_t *pport = 0;
