@@ -41,7 +41,7 @@ Hugepagesize:       2048 kB
   * Add dpdk-18.02/build/lib to your LD_LIBRARY_PATH in case the librte_*.so* libraries can't be located by ld
     + run `ldconfig dpdk-18.02/build/lib` if needed
 
-### Automatic Installation
+### Installation Using DPDK Usertools
 * Edit `config/common_base`:
   + set `CONFIG_RTE_MAX_MEMSEG=4096`
   + set `CONFIG_RTE_EAL_IGB_UIO=y`
@@ -58,6 +58,13 @@ Hugepagesize:       2048 kB
 * `cd dpdk-18.02/x86_64-native-linuxapp-gcc`
 * `make install DESTDIR=$PWD/../build`
   + Adjust makefile to point to correct headers and libraries
+
+### Installation Using Automation Scripts
+* This expects a dpdk-18.02 directory in the same parent directory as nfv-benchmark
+* Run:
+  * `./rumi_dpdk_auto_setup.exp`
+  * or
+  * `./dori_dpdk_auto_setup.exp`
 
 ## Troubleshooting
 ### Using **testpmd**
