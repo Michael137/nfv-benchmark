@@ -61,7 +61,8 @@ Hugepagesize:       2048 kB
 
 ### Installation Using Automation Scripts
 * This expects a dpdk-18.02 directory in the same parent directory as nfv-benchmark
-* Run:
+* From the root directory (nfv-benchmark) run: `./setup.sh`
+* Internally the setup script runs following [expect](https://likegeeks.com/expect-command/#Expect-Command) scripts depending on the server:
   * `./rumi_dpdk_auto_setup.exp`
   * or
   * `./dori_dpdk_auto_setup.exp`
@@ -101,8 +102,8 @@ Hugepagesize:       2048 kB
 - [x] Build and run anything
   - [x] Fix gcc warnings
 - [x] Run benchmarks
-- [ ] Automate dpdk setup
-- [ ] Merge rxer-test.c into rxer.c
+- [x] Automate dpdk setup
+- [x] Merge rxer-test.c into rxer.c
 - [ ] Refactor NF creation logic and rxer/txer
 ### Language
 - [ ] Initial language design
