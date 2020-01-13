@@ -1,5 +1,6 @@
 #!/bin/bash
 
+rm -rf ../dpdk-18.02/build ../dpdk-18.02/x86_64-native-linuxapp-gcc
 cp patches/dpdk-18.02/common_base ../dpdk-18.02/config/common_base
 
 HOSTNAME=$(hostname)
