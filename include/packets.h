@@ -41,9 +41,6 @@ packet_pool_t* packets_pool_create(uint32_t count, uint32_t size);
 void           packets_pool_zipfian(packet_pool_t *, uint32_t from, 
                     uint32_t to, uint32_t offset, uint32_t bytes, double dist);
 
-void           packets_pool_poisson(packet_pool_t *, uint32_t from, 
-                    uint32_t to, uint32_t offset, uint32_t bytes, double dist);
-
 // Delete the packet pool
 void                packets_pool_delete(packet_pool_t **);
 
