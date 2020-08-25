@@ -12,6 +12,7 @@
 #include "log.h"
 #include "packets.h"
 #include "pipeline.h"
+#include "opt.h"
 
 #include "rte_cycles.h"
 #include "rte_prefetch.h"
@@ -24,11 +25,16 @@ void datapath_teardown(struct dataplane_port_t *port);
 
 void test_benchmark(char const *);
 void test_benchmark(char const *name) {
-    uint32_t packet_count = 1<<24;
+    uint32_t packet_count = 1<<10;
+
     struct packet_pool_t *pool = packets_pool_create(packet_count, PACKET_SIZE);
 
     // Create a zipfian distribution for source/destination ip address
     packets_pool_zipfian(pool, 0, packet_count - 1, 26, 8, 0.5);
+
+    // poisson_init();
+    // packets_pool_poisson(pool, 0, packet_count - 1, 26, 8, 0.5);
+    // poisson_fini();
 
     // Compile and load the checksum-drop module
     struct jit_t jit = {0};
@@ -39,7 +45,7 @@ void test_benchmark(char const *name) {
     uint32_t repeat = 20;
     asm volatile ("mfence" ::: "memory");
     uint64_t cycles = rte_get_tsc_cycles();
-    (*jit.entry.test)(pool, repeat);
+    (*jit.entry.test)(pool, repeat, Opt);
     asm volatile ("mfence" ::: "memory");
     printf("num cycles per packet (%.2f)\n", (float)(rte_get_tsc_cycles() - cycles)/(float)(packet_count * repeat));
 
@@ -54,8 +60,8 @@ int datapath_init(int argc, char **argv, struct dataplane_port_t **port) {
     if (ret < 0)
         rte_exit(EXIT_FAILURE, "Failed to initialize the EAL.");
 
-    const char port_name[] = "0000:06:00.3";
-    log_info_fmt("Num available dpdk ports: %d", rte_eth_dev_count());
+    const char port_name[] = PORT_NAME;
+    log_info_fmt("Num available dpdk ports (i.e., number of usable ethernet devices): %d", rte_eth_dev_count());
 
     struct dataplane_port_t *pport = 0;
     ret = port_configure(port_name, &pport);
@@ -83,7 +89,7 @@ int main(int argc, char **argv) {
     if (!port) 
         return 0;
 
-    sleep(10);
+    test_benchmark(0);
 
     datapath_teardown(port);
     return 0;
